@@ -13,16 +13,16 @@ fn main() -> eframe::Result {
             .with_icon(
                 // NOTE: Adding an icon is optional
                 eframe::icon_data::from_png_bytes(
-                    &include_bytes!("../assets/favicon-512x512.png")[..],
+                    &include_bytes!("../assets/star_walker_favicon.png")[..],
                 )
                 .expect("Failed to load icon"),
             ),
         ..Default::default()
     };
     eframe::run_native(
-        "eframe template",
+        "star walker",
         native_options,
-        Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(star_walker::StarWalker::new(cc)))),
     )
 }
 
@@ -52,7 +52,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(eframe_template::StarWalker::new(cc)))),
             )
             .await;
 

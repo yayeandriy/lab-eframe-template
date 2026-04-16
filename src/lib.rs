@@ -1,4 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-pub use app::TemplateApp;
+mod scene;
+mod paint_bezier;
+pub use app::StarWalker;
