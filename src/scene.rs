@@ -23,6 +23,7 @@ impl SceneDemo {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         
         ui.label(format!("Scene rect: {:#?}", &mut self.scene_rect));
+        ui.label(format!("Curve size: {:#?}", &mut self.bezier.curve_size));
 
         ui.separator();
 

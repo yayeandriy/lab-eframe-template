@@ -22,6 +22,7 @@ pub struct PaintBezier {
     aux_stroke: Stroke,
 
     bounding_box_stroke: Stroke,
+    pub curve_size: Vec2,
 }
 
 impl Default for PaintBezier {
@@ -38,6 +39,7 @@ impl Default for PaintBezier {
             fill: Color32::from_rgb(50, 100, 150).linear_multiply(0.25),
             aux_stroke: Stroke::new(1.0, Color32::RED.linear_multiply(0.25)),
             bounding_box_stroke: Stroke::new(0.0, Color32::LIGHT_GREEN.linear_multiply(0.25)),
+            curve_size: Vec2::ZERO,
         }
     }
 }
@@ -84,6 +86,7 @@ impl PaintBezier {
     pub fn ui_content(&mut self, ui: &mut Ui) -> egui::Response {
         let (response, painter) =
             ui.allocate_painter(Vec2::new(ui.available_width(), ui.available_height()), Sense::hover());
+        
         // let painter = painter.with_clip_rect(egui::Rect::EVERYTHING);
         
         // let to_screen = emath::RectTransform::from_to(
@@ -92,7 +95,7 @@ impl PaintBezier {
         // );
 
         let control_point_radius = 8.0;
-
+        self.curve_size = self.control_points[0] - self.control_points[self.degree - 1];
         let control_point_shapes: Vec<Shape> = self
             .control_points
             .iter_mut()
@@ -108,6 +111,7 @@ impl PaintBezier {
                 *point += point_response.drag_delta();
 
                 let stroke = ui.style().interact(&point_response).fg_stroke;
+                
 
                 Shape::circle_stroke(*point, control_point_radius, stroke)
             })
