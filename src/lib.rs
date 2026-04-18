@@ -2,5 +2,6 @@
 
 mod app;
 mod scene;
+mod scene_grid;
 mod paint_bezier;
 pub use app::StarWalker;
