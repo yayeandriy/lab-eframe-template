@@ -7,6 +7,7 @@ pub struct SceneDemo {
     scene_rect: Rect,
     bezier: PaintBezier,
     grid: SceeneGrid,
+    scene_bg_color: Color32,
 }
 
 impl Default for SceneDemo {
@@ -15,6 +16,7 @@ impl Default for SceneDemo {
             scene_rect: Rect::ZERO, // `egui::Scene` will initialize this to something valid
             bezier: PaintBezier::default(),
             grid: SceeneGrid::default(),
+            scene_bg_color: Color32::from_rgb(200, 200, 200).linear_multiply(0.25),
         }
     }
 }
@@ -32,7 +34,7 @@ impl SceneDemo {
 
         egui::Frame::canvas(ui.style())
             .inner_margin(0.0)
-            .fill(Color32::YELLOW)
+            .fill(self.scene_bg_color)
             .show(ui, |ui| {
                 let space_held = ui.input(|i| i.key_down(Key::Space));
 

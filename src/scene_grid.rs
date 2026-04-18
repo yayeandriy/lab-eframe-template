@@ -5,6 +5,7 @@ pub struct SceeneGrid {
     unit_size: Vec2,
     dist: Vec2, //distance between nodes in unit size
     node_size: f32,
+    grid_color: Color32,
     pub n_nodes: usize
 }
 
@@ -14,6 +15,7 @@ impl Default for SceeneGrid {
             unit_size: Vec2::new(10.0, 10.0),
             dist: Vec2::new(10.0, 10.0),
             node_size: 1.0,
+            grid_color: Color32::GRAY.linear_multiply(0.25),
             n_nodes: 0,
         }
     }
@@ -27,7 +29,7 @@ impl SceeneGrid {
         // Bypass the allocated-rect clip: paint on the scene's full clip rect.
         let painter = ui.painter_at(ui.clip_rect());
 
-        let grid_color = Color32::BLACK;
+        let grid_color = self.grid_color;
         // Use desired_size (captured before allocation) — available_* returns 0 after allocate.
         let number_nodes_x = (desired_size.x / self.dist.x).ceil() as usize;
         let number_nodes_y = (desired_size.y / self.dist.y).ceil() as usize;
