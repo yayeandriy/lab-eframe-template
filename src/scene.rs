@@ -18,7 +18,7 @@ impl Default for MainScene {
             bezier: PaintBezier::default(),
             drawing: Drawing::default(),
             grid: SceeneGrid::default(),
-            scene_bg_color: Color32::RED,
+            scene_bg_color: Color32::LIGHT_GRAY,
         }
     }
 }
@@ -71,7 +71,8 @@ impl MainScene {
                 scene
                     .show(ui, &mut self.scene_rect, |ui| {
                         self.grid.ui(ui);
-                        self.bezier.ui(ui);
+                        // self.bezier.ui(ui);
+                        self.drawing.grid_dist = self.grid.dist;
                         self.drawing.ui(ui);
                     });
 

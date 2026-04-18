@@ -3,7 +3,7 @@ use egui::{Color32, Sense, Shape, Ui, Vec2, pos2};
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SceeneGrid {
     unit_size: Vec2,
-    dist: Vec2, //distance between nodes in unit size
+    pub dist: Vec2, //distance between nodes in unit size
     node_size: f32,
     grid_color: Color32,
     is_grid_square: bool,
