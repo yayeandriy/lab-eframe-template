@@ -84,15 +84,11 @@ impl PaintBezier {
     }
 
     pub fn ui_content(&mut self, ui: &mut Ui) -> egui::Response {
-        let (response, painter) =
-            ui.allocate_painter(Vec2::new(ui.available_width(), ui.available_height()), Sense::hover());
-        
-        // let painter = painter.with_clip_rect(egui::Rect::EVERYTHING);
-        
-        // let to_screen = emath::RectTransform::from_to(
-        //     Rect::from_min_size(Pos2::ZERO, response.rect.size()),
-        //     response.rect,
-        // );
+        let desired_size = Vec2::new(ui.available_width(), ui.available_height());
+        let (_rect, response) = ui.allocate_exact_size(desired_size, Sense::hover());
+
+        // Bypass the allocated-rect clip: paint on the scene's full clip rect.
+        let painter = ui.painter_at(ui.clip_rect());
 
         let control_point_radius = 8.0;
         self.curve_size = self.control_points[0] - self.control_points[self.degree - 1];
@@ -111,7 +107,6 @@ impl PaintBezier {
                 *point += point_response.drag_delta();
 
                 let stroke = ui.style().interact(&point_response).fg_stroke;
-                
 
                 Shape::circle_stroke(*point, control_point_radius, stroke)
             })
@@ -126,9 +121,9 @@ impl PaintBezier {
 
         match self.degree {
             3 => {
-                let points = points.clone().try_into().unwrap();
+                let pts = points.clone().try_into().unwrap();
                 let shape =
-                    QuadraticBezierShape::from_points_stroke(points, true, self.fill, self.stroke);
+                    QuadraticBezierShape::from_points_stroke(pts, true, self.fill, self.stroke);
                 painter.add(epaint::RectShape::stroke(
                     shape.visual_bounding_rect(),
                     0.0,
@@ -138,9 +133,9 @@ impl PaintBezier {
                 painter.add(shape);
             }
             4 => {
-                let points = points.clone().try_into().unwrap();
+                let pts = points.clone().try_into().unwrap();
                 let shape =
-                    CubicBezierShape::from_points_stroke(points, true, self.fill, self.stroke);
+                    CubicBezierShape::from_points_stroke(pts, true, self.fill, self.stroke);
                 painter.add(epaint::RectShape::stroke(
                     shape.visual_bounding_rect(),
                     0.0,
