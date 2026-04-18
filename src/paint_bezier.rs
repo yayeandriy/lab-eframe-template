@@ -119,6 +119,32 @@ impl PaintBezier {
             .cloned()
             .collect();
 
+        // Compute bounding box for the whole curve to use as a drag handle.
+        let curve_bbox = points.iter().fold(
+            Rect::from_min_max(points[0], points[0]),
+            |r, &p| r.union(Rect::from_min_max(p, p)),
+        );
+        let body_id = response.id.with("body");
+        let body_response = ui.interact(curve_bbox, body_id, Sense::drag());
+        let body_delta = body_response.drag_delta();
+
+        // Only move the whole curve if no individual control point is being dragged.
+        let any_point_dragged = self
+            .control_points
+            .iter()
+            .enumerate()
+            .take(self.degree)
+            .any(|(i, _)| {
+                let pid = response.id.with(i);
+                ui.ctx().is_being_dragged(pid)
+            });
+
+        if body_delta != Vec2::ZERO && !any_point_dragged {
+            for point in self.control_points.iter_mut().take(self.degree) {
+                *point += body_delta;
+            }
+        }
+
         match self.degree {
             3 => {
                 let pts = points.clone().try_into().unwrap();
