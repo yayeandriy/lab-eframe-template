@@ -1,11 +1,12 @@
 use egui::{Color32, Key, Rect, Scene};
 
-use crate::{paint_bezier::PaintBezier, scene_grid::SceeneGrid};
+use crate::{drawing::Drawing, paint_bezier::PaintBezier, scene_grid::SceeneGrid};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MainScene {
     scene_rect: Rect,
     bezier: PaintBezier,
+    drawing: Drawing,
     grid: SceeneGrid,
     scene_bg_color: Color32,
 }
@@ -15,6 +16,7 @@ impl Default for MainScene {
         Self {
             scene_rect: Rect::ZERO, // `egui::Scene` will initialize this to something valid
             bezier: PaintBezier::default(),
+            drawing: Drawing::default(),
             grid: SceeneGrid::default(),
             scene_bg_color: Color32::RED,
         }
@@ -38,6 +40,7 @@ impl MainScene {
             self.ui_control(ui);
             ui.separator();
             self.grid.ui_control(ui);
+            self.drawing.ui_control(ui);
         });
     }
 
@@ -69,6 +72,7 @@ impl MainScene {
                     .show(ui, &mut self.scene_rect, |ui| {
                         self.grid.ui(ui);
                         self.bezier.ui(ui);
+                        self.drawing.ui(ui);
                     });
 
                 if !space_held {

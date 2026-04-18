@@ -2,8 +2,8 @@
 Todo:
   ☐ Constructor
     ☐ UI
-      - grid
-      - draw rect
+      ✔ grid @done(26-04-18 17:53)
+      ☐ draw rect
     ☐ Physics
     ☐ Locomotion
   ☐ Simple wlak
