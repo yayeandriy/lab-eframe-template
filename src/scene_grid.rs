@@ -6,6 +6,7 @@ pub struct SceeneGrid {
     dist: Vec2, //distance between nodes in unit size
     node_size: f32,
     grid_color: Color32,
+    is_grid_square: bool,
     pub n_nodes: usize
 }
 
@@ -15,14 +16,41 @@ impl Default for SceeneGrid {
             unit_size: Vec2::new(10.0, 10.0),
             dist: Vec2::new(10.0, 10.0),
             node_size: 1.0,
-            grid_color: Color32::GRAY.linear_multiply(0.25),
+            grid_color: Color32::WHITE,
             n_nodes: 0,
+            is_grid_square: true,
         }
     }
 }
 
 
 impl SceeneGrid {
+    pub fn ui_control(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Grid color");
+            ui.color_edit_button_srgba(&mut self.grid_color);
+        });
+       ui.horizontal(|ui| {
+            ui.label("Square Grid");
+            ui.checkbox(&mut self.is_grid_square, "");
+        });
+        
+        ui.horizontal(|ui| {
+            ui.label("Dist X");
+            ui.add(egui::Slider::new(&mut self.dist.x, 5.0..=50.0));
+        });
+        if self.is_grid_square {
+            self.dist.y = self.dist.x;
+        }else {
+            ui.horizontal(|ui| {
+                ui.label("Dist Y");
+                ui.add(egui::Slider::new(&mut self.dist.y, 5.0..=50.0));
+            });    
+        }
+        
+       
+    }
+
     pub fn ui_content(&mut self, ui: &mut Ui) -> egui::Response {
         let desired_size = Vec2::new(ui.available_width(), ui.available_height());
         let (rect, response) = ui.allocate_exact_size(desired_size, Sense::hover());
@@ -47,14 +75,6 @@ impl SceeneGrid {
         response
     }
     pub fn ui(&mut self, ui: &mut Ui) {
-        // self.ui_control(ui);
-
-        // Frame::canvas(ui.style())
-        //     .fill(Color32::TRANSPARENT) 
-        //     .stroke(Stroke::NONE)
-        //     .show(ui, |ui| {
-        //         self.ui_content(ui);
-        //     });
         self.ui_content(ui);
-        }
+    }
 }

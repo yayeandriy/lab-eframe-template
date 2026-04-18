@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use egui::{FontDefinitions, FontFamily};
 
-use crate::scene::SceneDemo;
+use crate::scene::MainScene;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -13,7 +13,7 @@ pub struct StarWalker {
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
 
-    scene: SceneDemo,
+    scene: MainScene,
 }
 
 impl Default for StarWalker {
@@ -22,7 +22,7 @@ impl Default for StarWalker {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
-            scene: SceneDemo::default(),
+            scene: MainScene::default(),
         }
     }
 }
@@ -83,7 +83,7 @@ impl eframe::App for StarWalker {
             //     ui.text_edit_singleline(&mut self.label);
             // });
 
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
+            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
             // if ui.button("Increment").clicked() {
             //     self.value += 1.0;
             // }
