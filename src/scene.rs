@@ -1,12 +1,13 @@
-use egui::{Color32, Key, Rect, Scene};
+use egui::{Color32, Rect};
 
-use crate::{drawing::Drawing, paint_bezier::PaintBezier, scene_grid::SceeneGrid};
+use crate::{drawing::Drawing, paint_bezier::PaintBezier, plan::Plan, scene_grid::SceeneGrid};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MainScene {
     scene_rect: Rect,
     bezier: PaintBezier,
     drawing: Drawing,
+    plan: Plan,
     grid: SceeneGrid,
     scene_bg_color: Color32,
 }
@@ -17,6 +18,7 @@ impl Default for MainScene {
             scene_rect: Rect::ZERO, // `egui::Scene` will initialize this to something valid
             bezier: PaintBezier::default(),
             drawing: Drawing::default(),
+            plan: Plan::default(),
             grid: SceeneGrid::default(),
             scene_bg_color: Color32::LIGHT_GRAY,
         }
@@ -39,6 +41,8 @@ impl MainScene {
         ui.horizontal(|ui| {
             self.ui_control(ui);
             ui.separator();
+            self.plan.ui_control(ui);
+            ui.separator();
             self.grid.ui_control(ui);
             self.drawing.ui_control(ui);
         });
@@ -55,41 +59,7 @@ impl MainScene {
             .inner_margin(0.0)
             .fill(self.scene_bg_color)
             .show(ui, |ui| {
-                let space_held = ui.input(|i| i.key_down(Key::Space));
-
-                if space_held {
-                    ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
-                }
-
-                let scene = Scene::new()
-                    .max_inner_size([1350.0, 1000.0])
-                    .zoom_range(0.1..=2.0);
-
-                // Snapshot before Scene mutates scene_rect.
-                let prev_rect = self.scene_rect;
-
-                scene
-                    .show(ui, &mut self.scene_rect, |ui| {
-                        self.grid.ui(ui);
-                        // self.bezier.ui(ui);
-                        self.drawing.grid_dist = self.grid.dist;
-                        self.drawing.ui(ui);
-                    });
-
-                if !space_held {
-                    // Pan leaves size unchanged; zoom changes size.
-                    // Cancel any pure pan, but let zoom through.
-                    let size_unchanged = (self.scene_rect.size() - prev_rect.size()).length() < 0.5;
-                    if size_unchanged {
-                        self.scene_rect = prev_rect;
-                    } else {
-                        // Zoom happened — keep new scale but cancel translation.
-                        self.scene_rect = Rect::from_center_size(
-                            prev_rect.center(),
-                            self.scene_rect.size(),
-                        );
-                    }
-                }
+                self.plan.ui_content(ui);
             });
         
     }
