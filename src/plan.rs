@@ -4,11 +4,10 @@ use grid_util::{Point, grid::ValueGrid};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Plan {
-    rects: Vec<[f32; 4]>,
+    rects: Vec<Rect>,
     points_to_pass: Vec<Pos2>,
-    /// in 0-1 normalized coordinates
     lines: Vec<Vec<Pos2>>,
-    grid_size: usize,
+    ps_grid_size: usize,
     stroke: Stroke,
     fill: Color32,
     corner_radius: f32,
@@ -16,19 +15,13 @@ pub struct Plan {
 
 impl Default for Plan {
     fn default() -> Self {
-        // Rects as fractions of canvas — must not cover (0,0) or (9,9) in grid space
-        // let rects = vec![
-        //     [0.15, 0.15, 0.20, 0.40],
-        //     [0.55, 0.15, 0.80, 0.20],
-        //     // [0.45, 0.55, 0.40, 0.80],
-        //     // [0.65, 0.55, 0.80, 0.60],
-        // ];
+       
         let rects = (0..5).map(|_| {
             let x0 = rand::random::<f32>() * 0.9;
             let y0 = rand::random::<f32>() * 0.9;
             let w = 0.05 + rand::random::<f32>() * 0.05;
             let h = 0.05 + rand::random::<f32>() * 0.05;
-            [x0, y0, x0 + w, y0 + h]
+            Rect::from_min_max(pos2(x0, y0), pos2(x0 + w, y0 + h))
         }).collect();
         let points_to_pass = (0..10).map(|_| pos2(rand::random::<f32>(), rand::random::<f32>())).collect();
         Self {
@@ -37,7 +30,7 @@ impl Default for Plan {
             lines: Default::default(),
             stroke: Stroke::new(2.0, Color32::from_rgb(25, 200, 100)),
             fill: Color32::from_rgb(50, 100, 200),
-            grid_size: 100,
+            ps_grid_size: 100,
             corner_radius: 12.0,
         }
     }
@@ -46,15 +39,16 @@ impl Default for Plan {
 impl Plan {
     pub fn ui_control(&mut self, ui: &mut egui::Ui) {
         ui.add(egui::Slider::new(&mut self.corner_radius, 0.0..=80.0).text("Corner radius"));
+        ui.add(egui::Slider::new(&mut self.ps_grid_size, 10..=800).text("Grid size"));
     }
 
     fn path_f(&mut self) -> Vec<Pos2> {
-        let mut pathing_grid: PathingGrid = PathingGrid::new(self.grid_size, self.grid_size, false);
-        for [p0, p1, p2, p3] in &self.rects {
-            let min_x = (p0 * self.grid_size as f32) as usize;
-            let min_y = (p1 * self.grid_size as f32) as usize;
-            let max_x = (p2 * self.grid_size as f32).ceil() as usize;
-            let max_y = (p3 * self.grid_size as f32).ceil() as usize;
+        let mut pathing_grid: PathingGrid = PathingGrid::new(self.ps_grid_size, self.ps_grid_size, false);
+        for rect in &self.rects {
+            let min_x = (rect.min.x * self.ps_grid_size as f32) as usize;
+            let min_y = (rect.min.y * self.ps_grid_size as f32) as usize;
+            let max_x = (rect.max.x * self.ps_grid_size as f32).ceil() as usize;
+            let max_y = (rect.max.y * self.ps_grid_size as f32).ceil() as usize;
             for x in min_x..max_x {
                 for y in min_y..max_y {
                     pathing_grid.set(x as i32, y as i32, true);
@@ -62,21 +56,18 @@ impl Plan {
             }
         }
         for point in &self.points_to_pass {
-            let x = (point.x * self.grid_size as f32) as usize;
-            let y = (point.y * self.grid_size as f32) as usize;
+            let x = (point.x * self.ps_grid_size as f32) as usize;
+            let y = (point.y * self.ps_grid_size as f32) as usize;
             pathing_grid.set(x as i32, y as i32, false);
         }
-        // // Ensure start (0,0) and end (grid_size-1,grid_size-1) are always passable
-        // pathing_grid.set(0, 0, false);
-        // pathing_grid.set((self.grid_size - 1) as i32, (self.grid_size - 1) as i32, false);
-
+      
         pathing_grid.generate_components();
         let grid_points: Vec<Point> = self.points_to_pass
-    .iter()
-    .map(|p| {
+            .iter()
+            .map(|p| {
         Point::new(
-                    (p.x * self.grid_size as f32) as i32,
-                    (p.y * self.grid_size as f32) as i32,
+                    (p.x * self.ps_grid_size as f32) as i32,
+                    (p.y * self.ps_grid_size as f32) as i32,
                 )
             })
             .collect();
@@ -105,8 +96,8 @@ impl Plan {
             .into_iter()
             .map(|p| {
                 pos2(
-                    (p.x as f32 + 0.5) / self.grid_size as f32,
-                    (p.y as f32 + 0.5) / self.grid_size as f32,
+                    (p.x as f32 + 0.5) / self.ps_grid_size as f32,
+                    (p.y as f32 + 0.5) / self.ps_grid_size as f32,
                 )
             })
             .collect()
@@ -229,15 +220,10 @@ impl Plan {
 
         // Interact first (needs &mut ui, painter not yet alive)
         self.draw_obstacles(ui, canvas);
+        self.draw_stops(ui, canvas);
 
         let painter = ui.painter();
-        // Draw start/end markers
-        // painter.circle_filled(canvas.min, 8.0, Color32::from_rgb(50, 200, 50));
-        // painter.circle_filled(canvas.max, 8.0, Color32::from_rgb(200, 50, 50));
-        for point in &self.points_to_pass {
-            let center = canvas.min + egui::Vec2::new(point.x * w, point.y * h);
-            painter.circle_filled(center, 6.0, Color32::from_rgb(50, 200, 50));
-        }
+       
 
         // Draw path as catmull-rom spline through the waypoints
         let path: Vec<Pos2> = self.path_f().into_iter()
@@ -266,16 +252,42 @@ impl Plan {
         response
     }
 
-    fn draw_obstacles(&mut self, ui: &mut Ui, canvas: Rect) {
-        let w = canvas.width();
-        let h = canvas.height();
+    fn draw_stops(&mut self, ui: &mut Ui, canvas: Rect) {
+        let wh = Vec2::new(canvas.width(), canvas.height());
+        let point_radius = 6.0;
+        let mut drag_delta: Option<(usize, Vec2)> = None;
+        let painter = ui.painter();
+        for (point_idx, point) in self.points_to_pass.iter().enumerate() {
+            let center = canvas.min + point.to_vec2() * wh;
+            let rect_to_drag = Rect::from_center_size(center, Vec2::splat(point_radius * 2.0));
+            let id = ui.id().with(point_idx).with("stop");
+            let response = ui.interact(rect_to_drag, id, Sense::drag());
+            if response.dragged() {
+                 drag_delta = Some((point_idx, response.drag_delta()));               
+            }            
+        }
+        // Apply drag (mutable borrow, separate from the iterator above)
+        if let Some((point_idx, delta)) = drag_delta {
+            let pos = delta / wh;
+            self.points_to_pass[point_idx] += pos;            
+        }
 
+        // Draw all points
+        for point in &self.points_to_pass {
+            let center = canvas.min + point.to_vec2() * wh;
+            painter.circle_filled(center, point_radius, self.fill);
+        }            
+
+    }
+
+    fn draw_obstacles(&mut self, ui: &mut Ui, canvas: Rect) {
+        let wh = Vec2::new(canvas.width(), canvas.height());
         // Collect drag deltas first (immutable borrow ends before mutation)\n
         let mut drag_delta: Option<(usize, Vec2)> = None;
-        for (rect_idx, [x0, y0, x1, y1]) in self.rects.iter().enumerate() {
-            let min = canvas.min + egui::Vec2::new(x0 * w, y0 * h);
-            let max = canvas.min + egui::Vec2::new(x1 * w, y1 * h);
-            let r = egui::Rect::from_min_max(min, max);
+        for (rect_idx, rect) in self.rects.iter().enumerate() {        
+            let min = canvas.min + rect.min.to_vec2() * wh;
+            let max = canvas.min + rect.max.to_vec2() * wh;
+            let r = Rect::from_min_max(min, max);
             let inset = 12.0;
             let body_rect = r.shrink(inset);
             let body_id = ui.id().with(rect_idx).with("body");
@@ -286,18 +298,17 @@ impl Plan {
         }
         // Apply drag (mutable borrow, separate from the iterator above)
         if let Some((rect_idx, delta)) = drag_delta {
-            self.rects[rect_idx][0] += delta.x / w;
-            self.rects[rect_idx][1] += delta.y / h;
-            self.rects[rect_idx][2] += delta.x / w;
-            self.rects[rect_idx][3] += delta.y / h;
+            let delta = delta / wh;
+            self.rects[rect_idx].min += delta;
+            self.rects[rect_idx].max += delta;
         }
 
         // Draw all rects
         let painter = ui.painter();
-        for [x0, y0, x1, y1] in &self.rects {
-            let min = canvas.min + egui::Vec2::new(x0 * w, y0 * h);
-            let max = canvas.min + egui::Vec2::new(x1 * w, y1 * h);
-            let r = egui::Rect::from_min_max(min, max);
+        for rect in &self.rects {
+            let min = canvas.min + rect.min.to_vec2() * wh;
+            let max = canvas.min + rect.max.to_vec2() * wh;
+            let r = Rect::from_min_max(min, max);
             painter.rect_filled(r, 0.0, self.fill);
             painter.rect_stroke(r, 0.0, self.stroke, egui::StrokeKind::Middle);
         }

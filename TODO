@@ -1,5 +1,21 @@
+Floor plan:
+  ☐ Load (imitate)
+  ☐ Semantic marking
+  ☐ Obstacle mapping
+Scenarios:
+  ☐ Data model
+  ☐ Sequence
+Evaluation:
+  ☐ Path finding
+  ☐ Scoring
 
-Todo:
+
+
+
+
+-------
+
+Backlog:
   ☐ Constructor
     ☐ UI
       ✔ grid @done(26-04-18 17:53)
