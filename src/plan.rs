@@ -2,6 +2,8 @@ use egui::{Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2, epaint::{CubicBezierSha
 use grid_pathfinding::{PathingGrid, waypoints_to_path};
 use grid_util::{Point, grid::ValueGrid};
 
+use crate::floor_plan::floor_plan_model::FloorPlanModel;
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Plan {
     rects: Vec<Rect>,
@@ -11,6 +13,7 @@ pub struct Plan {
     stroke: Stroke,
     fill: Color32,
     corner_radius: f32,
+    floor_plan: FloorPlanModel
 }
 
 impl Default for Plan {
@@ -32,6 +35,7 @@ impl Default for Plan {
             fill: Color32::from_rgb(50, 100, 200),
             ps_grid_size: 100,
             corner_radius: 12.0,
+            floor_plan: FloorPlanModel::default(),
         }
     }
 }   
@@ -55,6 +59,25 @@ impl Plan {
                 }
             }
         }
+        //Restrict area out of the floor plan room bounds, which could complex shape and not necessarily rectangular. This is a bit of a hack, but it allows us to use the same pathfinding code without modification.
+        let room_corners = &self.floor_plan.room_corners;
+        if room_corners.len() >= 3 {
+            // Scale corners to grid space
+            let polygon: Vec<Pos2> = room_corners
+                .iter()
+                .map(|c| pos2(c.x * self.ps_grid_size as f32, c.y * self.ps_grid_size as f32))
+                .collect();
+            for x in 0..self.ps_grid_size {
+                for y in 0..self.ps_grid_size {
+                    let point = pos2(x as f32 + 0.5, y as f32 + 0.5);
+                    if !point_in_polygon(point, &polygon) {
+                        pathing_grid.set(x as i32, y as i32, true);
+                    }
+                }
+            }
+        }
+
+
         for point in &self.points_to_pass {
             let x = (point.x * self.ps_grid_size as f32) as usize;
             let y = (point.y * self.ps_grid_size as f32) as usize;
@@ -184,6 +207,24 @@ fn rounded_polyline(pts: &[Pos2], forced_corners: &[Pos2], radius: f32) -> Vec<e
     shapes
 }
 
+/// Ray-casting point-in-polygon test (works for convex and concave polygons).
+fn point_in_polygon(p: Pos2, polygon: &[Pos2]) -> bool {
+    let n = polygon.len();
+    let mut inside = false;
+    let mut j = n - 1;
+    for i in 0..n {
+        let pi = polygon[i];
+        let pj = polygon[j];
+        if ((pi.y > p.y) != (pj.y > p.y))
+            && (p.x < (pj.x - pi.x) * (p.y - pi.y) / (pj.y - pi.y) + pi.x)
+        {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
+}
+
 /// Remove collinear intermediate points, keeping only start, end, and direction-change points.
 fn decimate_path(pts: &[Pos2]) -> Vec<Pos2> {
     decimate_path_keeping(pts, &[], 0.0)
@@ -221,6 +262,7 @@ impl Plan {
         // Interact first (needs &mut ui, painter not yet alive)
         self.draw_obstacles(ui, canvas);
         self.draw_stops(ui, canvas);
+        self.floor_plan.draw_room(ui, canvas);
 
         let painter = ui.painter();
        

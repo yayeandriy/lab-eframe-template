@@ -6,4 +6,5 @@ mod scene_grid;
 mod paint_bezier;
 mod drawing;
 mod plan;
+pub mod floor_plan;
 pub use app::StarWalker;
