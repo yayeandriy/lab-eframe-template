@@ -44,6 +44,8 @@ impl Plan {
     pub fn ui_control(&mut self, ui: &mut egui::Ui) {
         ui.add(egui::Slider::new(&mut self.corner_radius, 0.0..=80.0).text("Corner radius"));
         ui.add(egui::Slider::new(&mut self.ps_grid_size, 10..=800).text("Grid size"));
+        ui.separator();
+        self.floor_plan.ui_control(ui);
     }
 
     fn path_f(&mut self) -> Vec<Pos2> {
