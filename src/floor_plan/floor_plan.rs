@@ -6,19 +6,27 @@ use crate::floor_plan::{plan_route::PlanRoute, svg_loader::SvgLoader};
 
 
 #[derive(serde::Deserialize, serde::Serialize)]
+pub struct Item {
+    pub rect: Rect,
+    pub id: String
+}
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct PlanGeometry {
     pub corners: Vec<Vec2>,
-    pub obstacles: Vec<Rect>,
+    pub items: Vec<Item>,
 }
 
 impl Default for PlanGeometry {
     fn default() -> Self {
-         let obstacles: Vec<Rect> = (0..5).map(|_| {
+         let items: Vec<Item> = (0..5).map(|i| {
             let x0 = rand::random::<f32>() * 0.9;
             let y0 = rand::random::<f32>() * 0.9;
             let w = 0.05 + rand::random::<f32>() * 0.05;
             let h = 0.05 + rand::random::<f32>() * 0.05;
-            Rect::from_min_max(pos2(x0, y0), pos2(x0 + w, y0 + h))
+            Item {
+                rect: Rect::from_min_max(pos2(x0, y0), pos2(x0 + w, y0 + h)),
+                id: format!("item_{}", i),
+            }
         }).collect();
         let corners = vec![
                 Vec2::new(0.1, 0.1),
@@ -30,7 +38,7 @@ impl Default for PlanGeometry {
             ];
         Self {
             corners,
-            obstacles,
+            items,
         }
     }           
 }
@@ -84,7 +92,8 @@ impl FloorPlan {
         
         // self.plan_geometry = plan_geometry;
         let corners_pos = self.plan_geometry.corners.iter().map(|c| pos2(c.x, c.y)).collect();
-        let plan_route = PlanRoute::new(self.points_to_pass.clone(), corners_pos, self.plan_geometry.obstacles.clone());
+        let obstacles = self.plan_geometry.items.iter().map(|item| item.rect).collect();
+        let plan_route = PlanRoute::new(self.points_to_pass.clone(), corners_pos, obstacles);
         self.plan_route = plan_route; 
         // Interact first (needs &mut ui, painter not yet alive)
         self.draw_obstacles(ui, canvas);
@@ -130,30 +139,30 @@ impl FloorPlan {
         let wh = Vec2::new(canvas.width(), canvas.height());
         // Collect drag deltas first (immutable borrow ends before mutation)\n
         let mut drag_delta: Option<(usize, Vec2)> = None;
-        for (rect_idx, rect) in self.plan_geometry.obstacles.iter().enumerate() {        
-            let min = canvas.min + rect.min.to_vec2() * wh;
-            let max = canvas.min + rect.max.to_vec2() * wh;
+        for (item_idx, item) in self.plan_geometry.items.iter().enumerate() {        
+            let min = canvas.min + item.rect.min.to_vec2() * wh;
+            let max = canvas.min + item.rect.max.to_vec2() * wh;
             let r = Rect::from_min_max(min, max);
             let inset = 12.0;
             let body_rect = r.shrink(inset);
-            let body_id = ui.id().with(rect_idx).with("body");
+            let body_id = ui.id().with(item_idx).with("body");
             let body_response = ui.interact(body_rect, body_id, Sense::drag());
             if body_response.dragged() {
-                drag_delta = Some((rect_idx, body_response.drag_delta()));
+                drag_delta = Some((item_idx, body_response.drag_delta()));
             }
         }
         // Apply drag (mutable borrow, separate from the iterator above)
-        if let Some((rect_idx, delta)) = drag_delta {
+        if let Some((item_idx, delta)) = drag_delta {
             let delta = delta / wh;
-            self.plan_geometry.obstacles[rect_idx].min += delta;
-            self.plan_geometry.obstacles[rect_idx].max += delta;
+            self.plan_geometry.items[item_idx].rect.min += delta;
+            self.plan_geometry.items[item_idx].rect.max += delta;
         }
 
         // Draw all rects
         let painter = ui.painter();
-        for rect in &self.plan_geometry.obstacles {
-            let min = canvas.min + rect.min.to_vec2() * wh;
-            let max = canvas.min + rect.max.to_vec2() * wh;
+        for item in &self.plan_geometry.items {
+            let min = canvas.min + item.rect.min.to_vec2() * wh;
+            let max = canvas.min + item.rect.max.to_vec2() * wh;
             let r = Rect::from_min_max(min, max);
             painter.rect_filled(r, 0.0, self.fill);
             painter.rect_stroke(r, 0.0, self.stroke, egui::StrokeKind::Middle);
@@ -174,10 +183,10 @@ impl FloorPlan {
             Stroke::new(1.0, Color32::BLACK),
         ));
 
-        let boxes = self.plan_geometry.obstacles.iter().map(|b| {
+        let boxes = self.plan_geometry.items.iter().map(|item| {
             Rect::from_min_max(
-                canvas.min + b.min.to_vec2() * wh,
-                canvas.min + b.max.to_vec2() * wh,
+                canvas.min + item.rect.min.to_vec2() * wh,
+                canvas.min + item.rect.max.to_vec2() * wh,
             )
         });
         // println!("Drawing room with boxes: {:?}", boxes);

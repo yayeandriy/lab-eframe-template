@@ -1,7 +1,7 @@
 use egui::{Color32, Rect, Ui, Vec2, pos2};
 use std::path::Path;
 
-use crate::floor_plan::floor_plan::PlanGeometry;
+use crate::floor_plan::floor_plan::{Item, PlanGeometry};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SvgLoader {
@@ -48,7 +48,7 @@ impl SvgLoader {
                             Ok((corners, obstacles)) => {
                                 self.load_error = None;
                                 self.box_load_error = None;
-                                Ok(PlanGeometry { corners, obstacles })
+                                Ok(PlanGeometry { corners, items: obstacles })
                             }
                             Err(e) => {
                                 self.load_error = Some(e);
@@ -71,12 +71,12 @@ impl SvgLoader {
     }
 
 
-    fn load_svg_geometry(path: &Path) -> Result<(Vec<Vec2>, Vec<Rect>), String> {
+    fn load_svg_geometry(path: &Path) -> Result<(Vec<Vec2>, Vec<Item>), String> {
         let corners = load_svg_corners(path)?;
         let svg_size = calc_svg_size(&corners);
         let normalized_corners = normalize(corners);
-        let boxes = load_svg_boxes(path, svg_size).unwrap_or_default();
-        Ok((normalized_corners, boxes))
+        let items = load_svg_items(path, svg_size).unwrap_or_default();        
+        Ok((normalized_corners, items))
     }
 
 }
@@ -119,7 +119,7 @@ pub fn load_svg_corners(path: &Path) -> Result<Vec<Vec2>, String> {
     Ok(points)
 }
 
-pub fn load_svg_boxes(path: &Path, svg_size: Vec2) -> Result<Vec<Rect>, String> {
+pub fn load_svg_items(path: &Path, svg_size: Vec2) -> Result<Vec<Item>, String> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| format!("Cannot read file: {e}"))?;
 
@@ -127,12 +127,13 @@ pub fn load_svg_boxes(path: &Path, svg_size: Vec2) -> Result<Vec<Rect>, String> 
         .map_err(|e| format!("SVG parse error: {e}"))?;
 
     // Find all <rect> elements and convert them to corner points
-    let mut boxes = Vec::new();
+    let mut items = Vec::new();
     for node in doc.descendants().filter(|n| n.is_element() && n.tag_name().name() == "rect") {
         let x = node.attribute("x").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
         let y = node.attribute("y").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
         let width = node.attribute("width").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
         let height = node.attribute("height").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+        let id = node.attribute("id").unwrap_or("").to_string();
 
         if width > 1e-6 && height > 1e-6 {
             println!("SVG BOX SOIRCE: {:?}", (x, y, width, height));
@@ -142,19 +143,23 @@ pub fn load_svg_boxes(path: &Path, svg_size: Vec2) -> Result<Vec<Rect>, String> 
                     Vec2::new(width as f32, height as f32) / svg_size,
                 ] ;
             
-            println!("SVG BOX NORMALIZED: {:?}", min);
-            boxes.push(Rect::from_min_size(
-                min[0].to_pos2(),
-                min[1],
-            ));
+
+            
+            items.push(Item {
+                rect: Rect::from_min_size(
+                    min[0].to_pos2(),
+                    min[1],
+                ),
+                id,
+            });
         }
     }
 
-    if boxes.is_empty() {
+    if items.is_empty() {
         return Err("No <rect> elements found in SVG".to_string());
     }
 
-    Ok(boxes)
+    Ok(items)
 }
 
 
