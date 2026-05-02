@@ -1,11 +1,14 @@
-use egui::{Rect, Vec2};
+use egui::{Color32, Rect, Stroke, StrokeKind, Vec2};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct FloorPlanModel {
     pub room_corners: Vec<Vec2>,
+    pub room_boxes: Vec<Rect>,
     /// Last SVG load error, not persisted.
     #[serde(skip)]
     pub load_error: Option<String>,
+    #[serde(skip)]
+    pub box_load_error: Option<String>,
 }
 
 impl Default for FloorPlanModel {
@@ -20,6 +23,8 @@ impl Default for FloorPlanModel {
                 Vec2::new(0.1, 0.9),
             ],
             load_error: None,
+            room_boxes: vec![],
+            box_load_error: None,
         }
     }
 }
@@ -42,15 +47,39 @@ impl FloorPlanModel {
                 .pick_file();
 
             if let Some(path) = picked {
-                match load_svg_corners(&path) {
-                    Ok(corners) => {
+                use crate::floor_plan::svg_loader::{load_svg_boxes, load_svg_geometry};
+
+                match load_svg_geometry(&path) {
+                    Ok((corners, boxes)) => {
                         self.room_corners = corners;
+                        self.room_boxes = boxes;
                         self.load_error = None;
+                        self.box_load_error = None;
                     }
                     Err(e) => {
                         self.load_error = Some(e);
-                    }
+                        self.box_load_error = None;
+                    }                    
                 }
+
+                // match load_svg_corners(&path) {
+                //     Ok(corners) => {
+                //         self.room_corners = corners;
+                //         self.load_error = None;
+                //     }
+                //     Err(e) => {
+                //         self.load_error = Some(e);
+                //     }
+                // }
+                // match load_svg_boxes(&path) {
+                //     Ok(boxes) => {
+                //         self.room_boxes = boxes;
+                //         self.box_load_error = None;
+                //     }
+                //     Err(e) => {
+                //         self.box_load_error = Some(e);
+                //     }
+                // }
             }
         }
     }
@@ -60,7 +89,10 @@ impl FloorPlanModel {
             self.load_from_svg_dialog();
         }
         if let Some(err) = &self.load_error {
-            ui.colored_label(egui::Color32::RED, err);
+            ui.colored_label(Color32::RED, err);
+        }
+        if let Some(err) = &self.box_load_error {
+            ui.colored_label(Color32::RED, err);
         }
     }
 
@@ -71,9 +103,25 @@ impl FloorPlanModel {
             .iter()
             .map(|corner| canvas.min + *corner * wh)
             .collect();
+        // println!("Drawing room with corners: {:?}", points);
         ui.painter().add(egui::Shape::closed_line(
             points,
-            egui::Stroke::new(2.0, egui::Color32::BLACK),
+            Stroke::new(1.0, Color32::BLACK),
         ));
+
+        let boxes = self.room_boxes.iter().map(|b| {
+            Rect::from_min_max(
+                canvas.min + b.min.to_vec2() * wh,
+                canvas.min + b.max.to_vec2() * wh,
+            )
+        });
+        // println!("Drawing room with boxes: {:?}", boxes);
+        for b in boxes {
+            ui.painter().rect_filled(
+                b,
+                0.0,
+                Color32::DARK_RED
+            );  
+        }
     }
 }

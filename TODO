@@ -2,11 +2,11 @@ Floor plan:
   ☐ Room @started(26-04-26 21:12)
     ✔ Draw @done(26-04-26 21:12)
     ✔ Borders @done(26-04-26 21:12)
+    ✔ Load from file @done(26-04-26 21:32)
+  ☐ Furniture
+    ☐ Draw
+    ☐ Include into path finder
     ☐ Load from file
-  
-  ☐ Load (imitate)
-  ☐ Semantic marking
-  ☐ Obstacle mapping
 Scenarios:
   ☐ Data model
   ☐ Sequence

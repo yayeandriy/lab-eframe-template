@@ -1,5 +1,21 @@
-use egui::Vec2;
+use egui::{Rect, Vec2};
 use std::path::Path;
+
+pub fn load_svg_geometry(path: &Path) -> Result<(Vec<Vec2>, Vec<Rect>), String> {
+    let corners = load_svg_corners(path)?;
+    let svg_size = calc_svg_size(&corners);
+    let normalized_corners = normalize(corners);
+    let boxes = load_svg_boxes(path, svg_size).unwrap_or_default();
+    Ok((normalized_corners, boxes))
+}
+
+fn calc_svg_size(corners: &[Vec2]) -> Vec2 {
+    let min_x = corners.iter().map(|p| p.x).fold(f32::INFINITY, f32::min);
+    let min_y = corners.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
+    let max_x = corners.iter().map(|p| p.x).fold(f32::NEG_INFINITY, f32::max);
+    let max_y = corners.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
+    Vec2::new(max_x - min_x, max_y - min_y)
+}
 
 /// Load the first `<path>` from an SVG file and return its vertices normalized to 0–1.
 pub fn load_svg_corners(path: &Path) -> Result<Vec<Vec2>, String> {
@@ -25,8 +41,47 @@ pub fn load_svg_corners(path: &Path) -> Result<Vec<Vec2>, String> {
         ));
     }
 
-    Ok(normalize(points))
+    Ok(points)
 }
+
+pub fn load_svg_boxes(path: &Path, svg_size: Vec2) -> Result<Vec<Rect>, String> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Cannot read file: {e}"))?;
+
+    let doc = roxmltree::Document::parse(&content)
+        .map_err(|e| format!("SVG parse error: {e}"))?;
+
+    // Find all <rect> elements and convert them to corner points
+    let mut boxes = Vec::new();
+    for node in doc.descendants().filter(|n| n.is_element() && n.tag_name().name() == "rect") {
+        let x = node.attribute("x").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+        let y = node.attribute("y").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+        let width = node.attribute("width").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+        let height = node.attribute("height").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+
+        if width > 1e-6 && height > 1e-6 {
+            println!("SVG BOX SOIRCE: {:?}", (x, y, width, height));
+            let min = 
+                vec![
+                    Vec2::new(x as f32, y as f32) / svg_size,
+                    Vec2::new(width as f32, height as f32) / svg_size,
+                ] ;
+            
+            println!("SVG BOX NORMALIZED: {:?}", min);
+            boxes.push(Rect::from_min_size(
+                min[0].to_pos2(),
+                min[1],
+            ));
+        }
+    }
+
+    if boxes.is_empty() {
+        return Err("No <rect> elements found in SVG".to_string());
+    }
+
+    Ok(boxes)
+}
+
 
 /// Parse an SVG path `d` string into a flat list of 2-D points.
 /// For curve commands only the end-point is used (good enough for room outlines).
