@@ -1,13 +1,13 @@
 use egui::{Color32, Rect};
 
-use crate::{drawing::Drawing, paint_bezier::PaintBezier, plan::Plan, scene_grid::SceeneGrid};
+use crate::{floor_plan::floor_plan::FloorPlan, scene::{drawing::Drawing, paint_bezier::PaintBezier, scene_grid::SceeneGrid}};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MainScene {
     scene_rect: Rect,
     bezier: PaintBezier,
     drawing: Drawing,
-    plan: Plan,
+    plan: FloorPlan,
     grid: SceeneGrid,
     scene_bg_color: Color32,
 }
@@ -18,7 +18,7 @@ impl Default for MainScene {
             scene_rect: Rect::ZERO, // `egui::Scene` will initialize this to something valid
             bezier: PaintBezier::default(),
             drawing: Drawing::default(),
-            plan: Plan::default(),
+            plan: FloorPlan::default(),
             grid: SceeneGrid::default(),
             scene_bg_color: Color32::LIGHT_GRAY,
         }

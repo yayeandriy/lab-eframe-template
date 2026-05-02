@@ -3,7 +3,7 @@
     <title>Room</title>
     <g id="Room" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <path d="M1010.98004,1 L1010.97987,221.304993 L1078.09313,221.305979 L1078.09313,512.101994 L789.214873,512.100998 L789.215077,658 L212.45898,658 L212.458873,427.481 L0.906873614,427.481153 L0.906873614,136.685144 L434.223873,136.685 L434.223947,1 L1010.98004,1 Z" id="Path" stroke="#979797"></path>
-        <rect id="Rectangle" fill="#D8D8D8" x="289" y="142" width="119" height="106"></rect>
-        <rect id="Rectangle-Copy" fill="#D8D8D8" x="814" y="309" width="119" height="106"></rect>
+        <rect id="owen" fill="#D8D8D8" x="289" y="142" width="119" height="106"></rect>
+        <rect id="table" fill="#D8D8D8" x="814" y="309" width="119" height="106"></rect>
     </g>
 </svg>

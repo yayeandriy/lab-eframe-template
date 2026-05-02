@@ -1,13 +1,88 @@
-use egui::{Rect, Vec2};
+use egui::{Color32, Rect, Ui, Vec2, pos2};
 use std::path::Path;
 
-pub fn load_svg_geometry(path: &Path) -> Result<(Vec<Vec2>, Vec<Rect>), String> {
-    let corners = load_svg_corners(path)?;
-    let svg_size = calc_svg_size(&corners);
-    let normalized_corners = normalize(corners);
-    let boxes = load_svg_boxes(path, svg_size).unwrap_or_default();
-    Ok((normalized_corners, boxes))
+use crate::floor_plan::floor_plan::PlanGeometry;
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct SvgLoader {
+    pub load_error: Option<String>,
+    pub box_load_error: Option<String>,
 }
+
+impl Default for SvgLoader {
+     
+    fn default() -> Self {
+       
+        
+        Self {
+            load_error: None,
+            box_load_error: None,
+        }
+    }
+}
+
+impl SvgLoader {
+     pub fn ui_control(&mut self, ui: &mut Ui, plan_geometry: &mut PlanGeometry) {
+         
+        if ui.button("Load floor plan SVG…").clicked() {
+           *plan_geometry = self.load_from_svg_dialog().unwrap_or_default();
+        }
+       
+    }
+
+     fn load_from_svg_dialog(&mut self) -> Result<PlanGeometry, String> {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+
+                let picked = rfd::FileDialog::new()
+                    .add_filter("SVG", &["svg"])
+                    .set_directory(
+                        std::env::current_dir()
+                            .unwrap_or_default()
+                            .join("assets"),
+                    )
+                    .pick_file();
+                match picked {
+                    Some(path) => {
+                        match Self::load_svg_geometry(&path) {
+                            Ok((corners, obstacles)) => {
+                                self.load_error = None;
+                                self.box_load_error = None;
+                                Ok(PlanGeometry { corners, obstacles })
+                            }
+                            Err(e) => {
+                                self.load_error = Some(e);
+                                self.box_load_error = None;
+                                Err(self.load_error.clone().unwrap())
+                            }                    
+                        }
+                    }
+                    None => {
+                        let err = "No file selected".to_string();
+                        self.load_error = Some(err.clone());
+                        self.box_load_error = None;
+                        Err(self.load_error.clone().unwrap())
+                    }
+                    
+                }
+                
+                
+            }
+    }
+
+
+    fn load_svg_geometry(path: &Path) -> Result<(Vec<Vec2>, Vec<Rect>), String> {
+        let corners = load_svg_corners(path)?;
+        let svg_size = calc_svg_size(&corners);
+        let normalized_corners = normalize(corners);
+        let boxes = load_svg_boxes(path, svg_size).unwrap_or_default();
+        Ok((normalized_corners, boxes))
+    }
+
+}
+
+
+
 
 fn calc_svg_size(corners: &[Vec2]) -> Vec2 {
     let min_x = corners.iter().map(|p| p.x).fold(f32::INFINITY, f32::min);

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use egui::{FontDefinitions, FontFamily};
 
-use crate::scene::MainScene;
+use crate::scene::scene::MainScene;
+
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
